@@ -1,0 +1,21 @@
+{
+  "update_id": 321634503,
+  "message": {
+    "message_id": 19200,
+    "from": {
+      "id": 111714468,
+      "is_bot": false,
+      "first_name": "Igor",
+      "username": "igorbu4",
+      "language_code": "ru"
+    },
+    "chat": {
+      "id": 111714468,
+      "first_name": "Igor",
+      "username": "igorbu4",
+      "type": "private"
+    },
+    "date": 1604184915,
+    "text": "И"
+  }
+}

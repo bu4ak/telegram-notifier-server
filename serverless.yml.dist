@@ -1,0 +1,47 @@
+service: telegram-notifier
+
+provider:
+  name: aws
+  region: eu-central-1
+  runtime: provided
+  # The stage of the application, e.g. dev, production, staging… ('dev' is the default)
+  stage: production
+  environment:
+    # Symfony environment variables
+    APP_ENV: prod
+    APP_DEBUG: false
+
+plugins:
+  - ./vendor/bref/bref
+
+package:
+  exclude:
+    - tests/**
+
+functions:
+  website:
+    handler: public/index.php
+    timeout: 28 # in seconds (API Gateway has a timeout of 29 seconds)
+    layers:
+      - ${bref:layer.php-74-fpm}
+    events:
+      - http: 'ANY /'
+      - http: 'ANY /{proxy+}'
+  console:
+    handler: bin/console
+    timeout: 120 # in seconds
+    layers:
+      - ${bref:layer.php-74} # PHP
+      - ${bref:layer.console} # The "console" layer
+
+  worker:
+    handler: bin/consumer.php
+    timeout: 20 # in seconds
+    reservedConcurrency: 5 # max. 5 messages processed in parallel
+    layers:
+      - ${bref:layer.php-74}
+    events:
+      - sqs:
+          arn: ...
+          # Only 1 item at a time to simplify error handling
+          batchSize: 1
