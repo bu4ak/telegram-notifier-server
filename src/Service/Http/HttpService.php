@@ -8,7 +8,7 @@ class HttpService implements HttpServiceInterface
 {
     protected LoggerInterface $logger;
 
-    public function sendMessage(string $url)
+    public function get(string $url)
     {
         $ch = curl_init();
         curl_setopt(

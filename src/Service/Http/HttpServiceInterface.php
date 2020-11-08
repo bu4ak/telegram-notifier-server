@@ -4,5 +4,5 @@ namespace App\Service\Http;
 
 interface HttpServiceInterface
 {
-    public function sendMessage(string $url);
+    public function get(string $url);
 }

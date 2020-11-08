@@ -39,7 +39,7 @@ class TelegramService implements TelegramServiceInterface
             ]
         );
         $query = "https://api.telegram.org/bot{$this->token}/sendMessage?$params";
-        $this->httpService->sendMessage($query);
+        $this->httpService->get($query);
 
         return true;
     }
