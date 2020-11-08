@@ -12,10 +12,11 @@ use Psr\Log\LoggerInterface;
 
 class DynamoDbUserRepository implements UserRepositoryInterface
 {
-    protected Marshaler $marshaler;
+    protected Marshaler $marshaller;
     protected DynamoDbClient $dynamodb;
     protected Config $config;
     protected LoggerInterface $logger;
+    protected ParamsBuilder $paramsBuilder;
 
     public function __construct(Config $config, LoggerInterface $logger)
     {
@@ -29,25 +30,18 @@ class DynamoDbUserRepository implements UserRepositoryInterface
         );
 
         $this->dynamodb = $sdk->createDynamoDb();
-        $this->marshaler = new Marshaler();
+        $this->marshaller = new Marshaler();
         $this->config = $config;
-        $this->logger = $logger;
+        $this->paramsBuilder = new ParamsBuilder($config->getTable());
     }
 
     public function findOneByToken(string $token): ?User
     {
-        $params = [
-            'TableName' => $this->config->getTable(),
-            'Key' => [
-                'token' => [
-                    'S' => $token
-                ]
-            ]
-        ];
         try {
+            $params = $this->paramsBuilder->getFindByTokenParams($token);
             $result = $this->dynamodb->getItem($params);
             if ($item = $result->get('Item')) {
-                $data = $this->marshaler->unmarshalItem($item);
+                $data = $this->marshaller->unmarshalItem($item);
                 return new User($data['chat_id'], $data['token']);
             }
         } catch (DynamoDbException $e) {
@@ -58,19 +52,12 @@ class DynamoDbUserRepository implements UserRepositoryInterface
 
     public function findOneByChatId(int $chatId): ?User
     {
-        $params = [
-            'TableName' => $this->config->getTable(),
-            'ProjectionExpression' =>  "#t, #chat",
-            'FilterExpression' => '#chat = :chat_id',
-            'ExpressionAttributeNames' => ['#chat' => 'chat_id', '#t' => 'token'],
-            'ExpressionAttributeValues' => $this->marshaler->marshalJson("{\":chat_id\": $chatId}")
-        ];
-
         try {
+            $params = $this->paramsBuilder->getFindByChatIdParams($chatId);
             $result = $this->dynamodb->scan($params);
 
             if ($items = $result->get('Items')) {
-                $data = $this->marshaler->unmarshalItem($items[0]);
+                $data = $this->marshaller->unmarshalItem($items[0]);
                 return new User($data['chat_id'], $data['token']);
             }
         } catch (DynamoDbException $e) {
@@ -81,19 +68,8 @@ class DynamoDbUserRepository implements UserRepositoryInterface
 
     public function save(User $user): bool
     {
-        $params = [
-            'TableName' => $this->config->getTable(),
-            'Item' => [
-                'chat_id' => [
-                    'N' => (string)$user->getChatId()
-                ],
-                'token' => [
-                    'S' => $user->getToken()
-                ],
-            ]
-        ];
-
         try {
+            $params = $this->paramsBuilder->getCreateOrUpdateParams($user);
             $this->dynamodb->putItem($params);
             return true;
         } catch (DynamoDbException $e) {
